@@ -11,28 +11,65 @@
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./App.css";
-import ShootingGame from "./ShootingGame";  // ←追記
+import ShootingGame from "./ShootingGame";  // ShootingGame コンポーネントをインポート
 
 function App() {
-  const [name, setName] = useState("");
+  const [name, setName] = useState("");   // ユーザー名の状態
+  const [isGameStarted, setIsGameStarted] = useState(false);  // ゲームが開始されたかどうかの状態
+  const [isError, setIsError] = useState(false);  // エラーハンドリング用の状態
 
+  // LIFFの初期化とユーザー情報の取得
   useEffect(() => {
     liff
       .init({
-        liffId: import.meta.env.VITE_LIFF_ID
+        liffId: import.meta.env.VITE_LIFF_ID, // LIFF IDを環境変数から取得
       })
       .then(() => {
         liff.getProfile()
           .then((profile) => {
-            setName(profile.displayName);
+            setName(profile.displayName); // プロフィールからユーザー名を取得して状態にセット
           })
+          .catch((error) => {
+            console.error("プロフィール取得失敗:", error);
+            setIsError(true); // エラー発生時
+          });
       })
+      .catch((error) => {
+        console.error("LIFF初期化失敗:", error);
+        setIsError(true); // エラー発生時
+      });
   }, []);
-  
+
+  // ゲーム開始の処理
+  const startGame = () => {
+    setIsGameStarted(true);  // ゲームを開始
+  };
+
+  // メニュー画面とゲーム画面を切り替えるロジック
   return (
     <div className="App">
-      {name && <p>こんにちは、{name}さん</p>}
-      <ShootingGame />  {/* 追記 */}
+      {isError ? (
+        <p>エラーが発生しました。もう一度試してください。</p>
+      ) : (
+        <>
+          {name ? (
+            <>
+              <p>こんにちは、{name}さん</p>
+              {isGameStarted ? (
+                <ShootingGame />  // ゲームを表示
+              ) : (
+                <div>
+                  <h2>ゲームメニュー</h2>
+                  <button onClick={startGame}>シューティングゲームを始める</button>
+                  {/* 他のゲームオプションも追加可能 */}
+                </div>
+              )}
+            </>
+          ) : (
+            <p>ユーザー情報を取得中...</p>
+          )}
+        </>
+      )}
     </div>
   );
 }
