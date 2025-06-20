@@ -1,0 +1,65 @@
+#この YAML ファイルは、次のようなフローで GitHub Pages にデプロイを行うワークフローを定義しています：
+#main ブランチにプッシュされるか、手動でワークフローを実行（workflow_dispatch）すると、デプロイが開始されます。
+#ビルドジョブでリポジトリのコードをクローンし、Node.js をセットアップして依存関係をインストールし、プロジェクトをビルドします。
+#ビルド後、生成された静的ファイルを GitHub Pages 用のアーティファクトとしてアップロードします。
+#デプロイジョブがビルド済みのアーティファクトを GitHub Pages にデプロイし、最終的にデプロイ先の URL を表示します。
+#このワークフローにより、main ブランチに変更がプッシュされると、GitHub Pages への自動デプロイが行われる仕組みが実現できます。
+
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: ['main']
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  build:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_BASE_URL: /${{ github.event.repository.name }}/
+          VITE_LIFF_ID: 2007611645-XYLaP69g
+
+      - name: Upload static files as artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'dist/'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      
+      - name: Print deployment URL
+        run: |
+          echo "Deployed to: ${{ steps.deployment.outputs.page_url }}"
